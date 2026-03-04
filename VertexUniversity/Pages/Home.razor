@@ -1,0 +1,195 @@
+﻿@page "/"
+@using VertexUniversity.Models
+@inject AppState AppState
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Dashboard - Vertex University</PageTitle>
+
+<div class="row g-4 animate-fade-in">
+    <!-- Welcome Section -->
+    <div class="col-12 mb-4">
+        <div class="glass-morphism p-5 rounded-5 border-0 shadow-lg position-relative overflow-hidden bg-indigo text-white">
+            <div class="position-relative z-index-10">
+                <h1 class="display-4 fw-bold mb-2">Welcome!</h1>
+                <p class="lead mb-4 opacity-75">Your central hub for campus life, academic excellence, and student innovation.</p>
+                <div class="d-flex gap-3">
+                    <button class="btn btn-light text-indigo btn-lg rounded-pill px-5 shadow-sm fw-bold" @onclick='() => Nav.NavigateTo("/Events")'>
+                        <i class="bi bi-compass me-2"></i> Explore Events
+                    </button>
+                    @if (AppState.IsAdmin)
+                    {
+                        <button class="btn btn-outline-light btn-lg rounded-pill px-5 fw-bold" @onclick='() => Nav.NavigateTo("/ManageEvents")'>
+                            Admin Panel
+                        </button>
+                    }
+                </div>
+            </div>
+            
+            <div class="abstract-shape"></div>
+            <div class="abstract-shape-2"></div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="col-md-4">
+        <div class="glass-morphism p-4 rounded-5 border-0 shadow-sm h-100 text-center bg-white">
+            <div class="bg-indigo-soft p-3 rounded-circle d-inline-block mb-3">
+                <i class="bi bi-calendar2-check-fill text-indigo fs-3"></i>
+            </div>
+            <h2 class="fw-bold text-indigo-900">@totalEventsCount</h2>
+            <p class="text-muted small fw-bold text-uppercase tracking-wider">Active Events</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-morphism p-4 rounded-5 border-0 shadow-sm h-100 text-center bg-white">
+            <div class="bg-indigo-soft p-3 rounded-circle d-inline-block mb-3">
+                <i class="bi bi-patch-check-fill text-indigo fs-3"></i>
+            </div>
+            <h2 class="fw-bold text-indigo-900">@AppState.RegisteredEvents.Count</h2>
+            <p class="text-muted small fw-bold text-uppercase tracking-wider">My Registrations</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-morphism p-4 rounded-5 border-0 shadow-sm h-100 text-center bg-white">
+            <div class="bg-indigo-soft p-3 rounded-circle d-inline-block mb-3">
+                <i class="bi bi-heart-fill text-danger fs-3"></i>
+            </div>
+            <h2 class="fw-bold text-indigo-900">@AppState.Wishlist.Count</h2>
+            <p class="text-muted small fw-bold text-uppercase tracking-wider">Favorites</p>
+        </div>
+    </div>
+
+    <!-- Featured Events Section -->
+    <div class="col-12 mt-5">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h3 class="fw-bold text-indigo-900 mb-0">Featured Experiences</h3>
+                <p class="text-muted mb-0">Don't miss out on these top-rated campus highlights.</p>
+            </div>
+            <button class="btn btn-link text-indigo fw-bold p-0 text-decoration-none" @onclick='() => Nav.NavigateTo("/Events")'>
+                View all <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-indigo" role="status"></div>
+            </div>
+        }
+        else if (featuredEvents.Any())
+        {
+            <div class="row g-4">
+                @foreach (var ev in featuredEvents)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 rounded-5 shadow-sm overflow-hidden bg-white hover-up" 
+                             style="cursor: pointer" @onclick='() => Nav.NavigateTo($"/EventDetails/{ev.Id}")'>
+                            <div class="position-relative">
+                                <img src="@ev.Image" class="card-img-top object-fit-cover" style="height: 200px;" alt="@ev.Title">
+                                <span class="badge bg-indigo rounded-pill position-absolute top-0 end-0 m-3 shadow-sm">@ev.Category</span>
+                            </div>
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold text-indigo-900 mb-2">@ev.Title</h5>
+                                <p class="text-muted small mb-3 text-truncate-2">@ev.Description</p>
+                                <div class="d-flex align-items-center gap-3 text-muted small">
+                                    <span><i class="bi bi-calendar3 me-1"></i> @ev.Date</span>
+                                    <span><i class="bi bi-geo-alt me-1"></i> @ev.Location</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5 glass-morphism rounded-5 border-dashed">
+                <p class="text-muted mb-0">No events currently scheduled. Check back later!</p>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .bg-indigo { background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%); }
+    .text-indigo-900 { color: #312e81; }
+    .text-indigo { color: #4f46e5; }
+    .bg-indigo-soft { background: rgba(79, 70, 229, 0.1); }
+    
+    .abstract-shape {
+        position: absolute;
+        top: -100px;
+        right: -100px;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        z-index: 1;
+    }
+
+    .abstract-shape-2 {
+        position: absolute;
+        bottom: -50px;
+        left: -50px;
+        width: 250px;
+        height: 250px;
+        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        border-radius: 50%;
+        z-index: 1;
+    }
+
+    .z-index-10 { z-index: 10; }
+    .hover-up { transition: transform 0.3s ease; }
+    .hover-up:hover { transform: translateY(-8px); }
+    .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+</style>
+
+@code {
+    private List<Event> featuredEvents = new();
+    private int totalEventsCount = 0;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        isLoading = true;
+        try
+        {
+            var allEvents = await JS.InvokeAsync<List<Event>>("firebaseInterop.getEvents");
+            totalEventsCount = allEvents?.Count ?? 0;
+            featuredEvents = allEvents?.Take(3).ToList() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error loading dashboard: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        AppState.OnChange -= StateHasChanged;
+    }
+}
+
+
+
+

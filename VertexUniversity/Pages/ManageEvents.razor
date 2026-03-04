@@ -1,0 +1,423 @@
+@page "/ManageEvents"
+@using VertexUniversity.Models
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject AppState AppState
+
+<PageTitle>Management - Vertex University</PageTitle>
+
+<div class="header-section mb-5 animate-fade-in">
+    <h2 class="fw-bold text-indigo-900">@(AppState.IsAdmin ? "Administrative Dashboard" : "Submit Student Event")</h2>
+    <p class="text-muted">@(AppState.IsAdmin ? "Complete control over campus operations and events." : "Share your event with the university community.")</p>
+</div>
+
+@if (AppState.IsAdmin)
+{
+    <div class="row g-4 animate-fade-in">
+        <!-- Action Form Column -->
+        <div class="col-lg-5">
+            <div class="glass-morphism p-4 p-md-5 rounded-5 border-0 shadow-sm bg-white">
+                <h4 class="fw-bold mb-4 text-indigo">
+                    <i class="bi @(isEditing ? "bi-pencil-square" : "bi-plus-circle") me-2"></i>
+                    @(isEditing ? "Update Event" : "Create New Event")
+                </h4>
+                
+                <EditForm Model="newEvent" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Event Title</label>
+                        <InputText class="form-control form-control-lg bg-light border-0 rounded-4" @bind-Value="newEvent.Title" placeholder="e.g., Hackathon 2026" />
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Category</label>
+                            <select class="form-select form-select-lg bg-light border-0 rounded-4" @bind="newEvent.Category">
+                                <option value="Academic">Academic</option>
+                                <option value="Social">Social</option>
+                                <option value="Career">Career</option>
+                                <option value="Arts">Arts</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Capacity</label>
+                            <InputNumber class="form-control form-control-lg bg-light border-0 rounded-4" @bind-Value="newEvent.Capacity" />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Location</label>
+                        <InputText class="form-control form-control-lg bg-light border-0 rounded-4" @bind-Value="newEvent.Location" placeholder="Main Auditorium" />
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Date</label>
+                            <InputText class="form-control form-control-lg bg-light border-0 rounded-4" @bind-Value="newEvent.Date" placeholder="2026-04-15" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Time</label>
+                            <InputText class="form-control form-control-lg bg-light border-0 rounded-4" @bind-Value="newEvent.Time" placeholder="09:00 AM" />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Cover Image</label>
+                        <div class="glass-morphism p-3 rounded-4 bg-light border-0">
+                            <div class="d-flex align-items-center gap-3">
+                                <label class="btn btn-outline-indigo rounded-pill px-4 mb-0" style="cursor: pointer">
+                                    <i class="bi bi-image me-2"></i> Choose File
+                                    <InputFile OnChange="HandleFileSelected" class="d-none" accept=".jpg,.jpeg,.png,.webp" />
+                                </label>
+                                <span class="text-muted small text-truncate">@(selectedFileName ?? "No file chosen")</span>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(newEvent.Image))
+                            {
+                                <div class="mt-3 rounded-4 overflow-hidden shadow-sm" style="max-height: 200px;">
+                                    <img src="@newEvent.Image" class="w-100 h-100 object-fit-cover" alt="Preview" />
+                                </div>
+                            }
+                        </div>
+                        @if (isUploadingImage)
+                        {
+                            <div class="progress mt-2" style="height: 4px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-indigo" role="progressbar" style="width: 100%"></div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Description</label>
+                        <InputTextArea class="form-control bg-light border-0 rounded-4" rows="3" @bind-Value="newEvent.Description" placeholder="Full details..." />
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-indigo btn-lg rounded-pill px-4 me-md-auto" @onclick="SeedSampleData" disabled="@isSubmitting">
+                            <i class="bi bi-rocket-takeoff"></i>
+                        </button>
+                        
+                        @if (isEditing)
+                        {
+                            <button type="button" class="btn btn-outline-secondary btn-lg rounded-pill px-4" @onclick="CancelEdit">Cancel</button>
+                        }
+                        
+                        <button type="submit" class="btn btn-indigo btn-lg rounded-pill px-5 shadow-sm" disabled="@isSubmitting">
+                            @(isSubmitting ? "Processing..." : (isEditing ? "Update Now" : "Publish Event"))
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+
+        <!-- Admin Event List Column -->
+        <div class="col-lg-7">
+            <div class="glass-morphism p-4 p-md-5 rounded-5 border-0 shadow-sm h-100 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold mb-0 text-indigo-900">Live Campus Events</h4>
+                    <button class="btn btn-light btn-sm rounded-pill" @onclick="LoadEvents">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+
+                <div class="event-list-scroll px-2">
+                    @if (events == null || !events.Any())
+                    {
+                        <div class="text-center py-5 opacity-50">
+                            <i class="bi bi-journal-x fs-1 d-block mb-3"></i>
+                            <p>No events found in database.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var ev in events)
+                        {
+                            <div class="event-admin-card glass-morphism p-3 rounded-4 border mb-3 d-flex align-items-center gap-3 animate-fade-in bg-white">
+                                <div class="event-img-mini rounded-3 overflow-hidden" style="width: 60px; height: 60px;">
+                                    <img src="@ev.Image" class="w-100 h-100 object-fit-cover" />
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="fw-bold mb-0 text-indigo-900">@ev.Title</h6>
+                                    <small class="text-muted">@ev.Date • @ev.Location</small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" @onclick="() => StartEdit(ev)">
+                                        <i class="bi bi-pencil"></i> <span>Edit</span>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill px-3 d-flex align-items-center gap-1" @onclick="() => HandleDelete(ev.Id)">
+                                        <i class="bi bi-trash"></i> <span>Delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- Admin Login Form -->
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-5">
+            <div class="glass-morphism p-5 rounded-5 border-0 shadow-lg bg-white">
+                <div class="text-center mb-5">
+                    <div class="bg-indigo-soft d-inline-block p-4 rounded-circle mb-4">
+                        <i class="bi bi-shield-lock text-indigo display-3"></i>
+                    </div>
+                    <h2 class="fw-bold text-indigo-900">Administrator Login</h2>
+                    <p class="text-muted">Access Vertex University management tools.</p>
+                </div>
+
+                <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Admin Email</label>
+                        <div class="input-group overflow-hidden rounded-4">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-envelope text-indigo"></i></span>
+                            <InputText class="form-control form-control-lg bg-light border-0" @bind-Value="loginModel.Email" placeholder="admin@vertex.edu" />
+                        </div>
+                        <ValidationMessage For="@(() => loginModel.Email)" class="text-danger small mt-1" />
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Password</label>
+                        <div class="input-group overflow-hidden rounded-4">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-key text-indigo"></i></span>
+                            <InputText type="password" class="form-control form-control-lg bg-light border-0" @bind-Value="loginModel.Password" placeholder="••••••••" />
+                        </div>
+                        <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small mt-1" />
+                    </div>
+
+                    <button type="submit" class="btn btn-indigo btn-lg w-100 rounded-pill py-3 fw-bold shadow-sm" disabled="@isSubmitting">
+                        @if (isSubmitting) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        Login to Shield
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(statusMessage) && !AppState.IsAdmin)
+                    {
+                        <div class="alert alert-danger mt-4 rounded-4 border-0 shadow-sm animate-fade-in small">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> @statusMessage
+                        </div>
+                    }
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .text-indigo-900 { color: #312e81; }
+    .text-indigo { color: #4f46e5; }
+    .btn-indigo { background-color: #4f46e5; color: white; }
+    .btn-indigo:hover { background-color: #4338ca; color: white; }
+    .btn-outline-indigo { border-color: #4f46e5; color: #4f46e5; }
+    .btn-outline-indigo:hover { background-color: #4f46e5; color: white; }
+    
+    .event-list-scroll { max-height: 600px; overflow-y: auto; }
+    .event-admin-card { transition: all 0.2s; }
+    .event-admin-card:hover { transform: translateX(5px); border-color: #4f46e5 !important; }
+
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+</style>
+
+@code {
+    private Event newEvent = new() { Date = "2026-04-15", Time = "09:00 AM", Capacity = 100, Category = "Academic" };
+    private List<Event>? events;
+    private bool isSubmitting = false;
+    private bool isEditing = false;
+    private string statusMessage = "";
+
+    // Login Logic
+    private LoginModel loginModel = new();
+
+    // Image Upload Logic
+    private string? selectedFileName;
+    private bool isUploadingImage = false;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        selectedFileName = file.Name;
+        isUploadingImage = true;
+        statusMessage = "Uploading image...";
+
+        try
+        {
+            // Set a size limit (e.g., 5MB)
+            var maxAllowedSize = 5 * 1024 * 1024;
+            using var stream = file.OpenReadStream(maxAllowedSize);
+            using var streamRef = new DotNetStreamReference(stream);
+
+            var result = await JS.InvokeAsync<UploadResult>("firebaseInterop.uploadFile", file.Name, file.ContentType, streamRef);
+            
+            if (result.Success)
+            {
+                newEvent.Image = result.Url;
+                statusMessage = "Image uploaded successfully!";
+            }
+            else
+            {
+                statusMessage = "Upload failed: " + result.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = "Error during upload: " + ex.Message;
+        }
+        finally
+        {
+            isUploadingImage = false;
+        }
+    }
+
+    public class UploadResult { public bool Success { get; set; } public string? Url { get; set; } public string? Error { get; set; } }
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        if (AppState.IsAdmin)
+        {
+            await LoadEvents();
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isSubmitting = true;
+        statusMessage = "";
+        try
+        {
+            var result = await AppState.LoginAdmin(loginModel.Email, loginModel.Password);
+            if (result.Success)
+            {
+                statusMessage = "Welcome, Administrator.";
+                await LoadEvents();
+            }
+            else
+            {
+                statusMessage = result.Error ?? "Login failed. Please check your credentials.";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = "An error occurred: " + ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task LoadEvents()
+    {
+        events = await JS.InvokeAsync<List<Event>>("firebaseInterop.getEvents");
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        statusMessage = "";
+        try
+        {
+            if (isEditing)
+            {
+                var res = await JS.InvokeAsync<FirebaseResult>("firebaseInterop.updateEvent", newEvent.Id, newEvent);
+                if (res.Success)
+                {
+                    statusMessage = "Event updated successfully!";
+                    isEditing = false;
+                    newEvent = new Event() { Date = "2026-04-15", Time = "09:00 AM", Capacity = 100, Category = "Academic" };
+                }
+            }
+            else
+            {
+                var res = await JS.InvokeAsync<FirebaseResult>("firebaseInterop.saveEvent", newEvent);
+                if (res.Success)
+                {
+                    statusMessage = AppState.IsAdmin ? "Event published successfully!" : "Proposal submitted to administrators.";
+                    newEvent = new Event() { Date = "2026-04-15", Time = "09:00 AM", Capacity = 100, Category = "Academic" };
+                }
+            }
+            await LoadEvents();
+        }
+        catch (Exception ex) { statusMessage = "Error: " + ex.Message; }
+        finally { isSubmitting = false; }
+    }
+
+    private void StartEdit(Event ev)
+    {
+        newEvent = new Event { 
+            Id = ev.Id, Title = ev.Title, Category = ev.Category, 
+            Date = ev.Date, Time = ev.Time, Location = ev.Location, 
+            Description = ev.Description, Image = ev.Image, 
+            Capacity = ev.Capacity, Organizer = ev.Organizer, ContactInfo = ev.ContactInfo 
+        };
+        isEditing = true;
+        statusMessage = "Editing: " + ev.Title;
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        newEvent = new Event() { Date = "2026-04-15", Time = "09:00 AM", Capacity = 100, Category = "Academic" };
+        statusMessage = "";
+    }
+
+    private async Task HandleDelete(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+        if (await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this event?"))
+        {
+            var res = await JS.InvokeAsync<FirebaseResult>("firebaseInterop.deleteEvent", id);
+            if (res.Success)
+            {
+                statusMessage = "Event deleted.";
+                await LoadEvents();
+            }
+        }
+    }
+
+    private async Task SeedSampleData()
+    {
+        isSubmitting = true;
+        statusMessage = "Seeding sample events...";
+        try
+        {
+            var samples = new List<Event>
+            {
+                new Event { 
+                    Title = "Vertex Hackathon 2026", Category = "Academic", 
+                    Date = "2026-05-20", Time = "08:00 AM - 08:00 PM", 
+                    Location = "Innovation Lab", Description = "Build the future in 12 hours.",
+                    Image = "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80",
+                    Capacity = 150
+                },
+                new Event { 
+                    Title = "Campus Music Night", Category = "Social", 
+                    Date = "2026-06-12", Time = "07:00 PM - 11:00 PM", 
+                    Location = "Main Plaza", Description = "Live student performances and food.",
+                    Image = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80",
+                    Capacity = 500
+                }
+            };
+
+            foreach (var ev in samples) await JS.InvokeAsync<FirebaseResult>("firebaseInterop.saveEvent", ev);
+            statusMessage = "Sample data seeded!";
+            await LoadEvents();
+        }
+        catch { statusMessage = "Seed failed."; }
+        finally { isSubmitting = false; }
+    }
+
+    public class FirebaseResult { public bool Success { get; set; } public string? Error { get; set; } }
+
+    public void Dispose() { AppState.OnChange -= StateHasChanged; }
+}
+

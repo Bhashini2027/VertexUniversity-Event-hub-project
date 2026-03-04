@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vertex University</title>
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="VertexUniversity.styles.css" rel="stylesheet" />
+    <link href="manifest.webmanifest" rel="manifest" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+    <script type="importmap"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import {
+            getFirestore, collection, addDoc, getDocs,
+            getDoc, setDoc,
+            doc,
+            updateDoc,
+            deleteDoc
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            signInAnonymously as firebaseSignInAnonymously,
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyAC4bEkhuwC1QlRXswQuqVU2foboRIcX2c",
+            authDomain: "bookapp-33999.firebaseapp.com",
+            projectId: "bookapp-33999",
+            storageBucket: "bookapp-33999.firebasestorage.app",
+            messagingSenderId: "465417686268",
+            appId: "1:465417686268:web:b205282f00164b8eeddb79",
+            measurementId: "G-XE1RDQH3P9"
+        };
+
+        // Ensure config is valid before initializing
+        const isValidConfig = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
+        let app, db, storage, auth;
+
+        if (isValidConfig) {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            storage = getStorage(app);
+            auth = getAuth(app);
+        } else {
+            console.warn("Firebase configuration is missing or invalid. Some features will be disabled.");
+        }
+
+        window.firebaseAuth =
+        {
+            signIn: async (email, password) => {
+                if (!auth) return { success: false, error: "Firebase not initialized" };
+                try {
+                    const userInfo = await
+                        signInWithEmailAndPassword(auth, email, password);
+                    return { success: true, email: userInfo.user.email };
+                } catch (e) {
+                    return { success: false, error: e.message };
+                }
+            },
+            logout: async () => {
+                if (auth) await signOut(auth);
+            },
+            getUser: () => {
+                return (auth && auth.currentUser) ? { email: auth.currentUser.email } : null;
+            }
+        };
+
+        window.firebaseInterop =
+        {
+            // --- Vertex University - CampusEvent Hub ---
+            getEvents: async () => {
+                if (!db) return [];
+                try {
+                    const querySnap = await getDocs(collection(db, "events"));
+                    const events = querySnap.docs.map(doc => {
+                        const data = doc.data();
+                        return { ...data, Id: doc.id };
+                    });
+                    // If no events in DB, return mock data as a fallback
+                    if (events.length === 0) {
+                        return [
+                            {
+                                Id: 'ev-1',
+                                Title: 'Annual Tech Symposium 2024',
+                                Category: 'Academic',
+                                Date: '2024-11-15',
+                                Time: '09:00 AM - 04:00 PM',
+                                Location: 'Main Auditorium, Building A',
+                                Description: 'A gathering of industry leaders and student innovators showcasing the latest in AI and Robotics.',
+                                ShortDescription: 'Explore the future of tech with industry experts.',
+                                Image: '/images/campus1.jpg',
+                                Organizer: 'Faculty of Engineering',
+                                ContactInfo: 'dean.eng@vertex.edu',
+                                Capacity: 200
+                            },
+                            {
+                                Id: 'ev-2',
+                                Title: 'Spring Music Festival',
+                                Category: 'Social',
+                                Date: '2024-12-05',
+                                Time: '06:00 PM - 10:00 PM',
+                                Location: 'West Campus Lawn',
+                                Description: 'Join the University Orchestra and local bands for an evening of live music and food trucks.',
+                                ShortDescription: 'Live music, food trucks, and great vibes.',
+                                Image: '/images/campus2.png',
+                                Organizer: 'Student Union',
+                                ContactInfo: 'events@vertex.edu',
+                                Capacity: 500
+                            },
+                            {
+                                Id: 'ev-3',
+                                Title: 'Vertex Code Hackathon',
+                                Category: 'Workshop',
+                                Date: '2025-01-20',
+                                Time: '10:00 AM - 06:00 PM',
+                                Location: 'Innovation Hub, Floor 4',
+                                Description: 'A 24-hour coding challenge for students to build innovative solutions for campus sustainability.',
+                                ShortDescription: 'Build solutions for a greener campus.',
+                                Image: '/images/campus3.png',
+                                Organizer: 'Faculty of Computing',
+                                ContactInfo: 'hack@vertex.edu',
+                                Capacity: 100
+                            },
+                            {
+                                Id: 'ev-4',
+                                Title: 'Inter-Faculty Soccer Cup',
+                                Category: 'Sports',
+                                Date: '2024-10-10',
+                                Time: '08:00 AM - 05:00 PM',
+                                Location: 'Main Sports Stadium',
+                                Description: 'The annual soccer championship where faculties compete for the ultimate trophy.',
+                                ShortDescription: 'The ultimate faculty showdown on the field.',
+                                Image: '/images/campus4.png',
+                                Organizer: 'Sports Department',
+                                ContactInfo: 'sports@vertex.edu',
+                                Capacity: 1000
+                            }
+                        ];
+                    }
+                    return events;
+                } catch (e) {
+                    console.error("Error fetching events:", e);
+                    return [];
+                }
+            },
+            getEventById: async (id) => {
+                if (!db) return null;
+                try {
+                    const docRef = doc(db, "events", id);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        return { ...data, Id: docSnap.id };
+                    }
+                    return null;
+                } catch (e) {
+                    console.error("Error fetching event by ID:", e);
+                    return null;
+                }
+            },
+            checkRSVP: async (eventId) => {
+                if (!db || !auth.currentUser) return false;
+                try {
+                    const rsvpRef = doc(db, 'artifacts', 'uni-event-hub', 'users', auth.currentUser.uid, 'rsvps', eventId);
+                    const rsvpSnap = await getDoc(rsvpRef);
+                    return rsvpSnap.exists();
+                } catch (e) {
+                    return false;
+                }
+            },
+            submitRegistration: async (eventId, registrationData) => {
+                if (!db || !auth) return { success: false, error: "Database not initialized" };
+
+                // Ensure we have a user
+                let user = auth.currentUser;
+                let uid = user ? user.uid : localStorage.getItem("vertex_local_uid");
+
+                if (!uid) {
+                    try {
+                        const cred = await firebaseSignInAnonymously(auth);
+                        uid = cred.user.uid;
+                    } catch (e) {
+                        // If anonymous auth is disabled/restricted, use a local fallback ID
+                        console.warn("Firebase Auth Restricted: Using local fallback ID.");
+                        uid = 'local_' + Math.random().toString(36).substr(2, 9);
+                        localStorage.setItem("vertex_local_uid", uid);
+                    }
+                }
+
+                try {
+                    const regRef = doc(db, 'registrations', `${uid}_${eventId}`);
+                    await setDoc(regRef, {
+                        ...registrationData,
+                        eventId: eventId,
+                        userId: uid,
+                        timestamp: new Date().toISOString()
+                    });
+                    return { success: true };
+                } catch (e) {
+                    return { success: false, error: e.message };
+                }
+            },
+            handleRSVP: async (event) => {
+                if (!db || !auth.currentUser) return { success: false, error: "Auth required" };
+                try {
+                    const rsvpRef = doc(db, 'artifacts', 'uni-event-hub', 'users', auth.currentUser.uid, 'rsvps', event.Id);
+                    await setDoc(rsvpRef, {
+                        eventTitle: event.Title,
+                        timestamp: new Date().toISOString()
+                    });
+                    return { success: true };
+                } catch (e) {
+                    return { success: false, error: e.message };
+                }
+            },
+            submitFeedback: async (feedback) => {
+                if (!db || !auth.currentUser) return { success: false, error: "Auth required" };
+                try {
+                    const feedbackData = {
+                        ...feedback,
+                        userId: auth.currentUser.uid,
+                        submittedAt: new Date().toISOString()
+                    };
+                    await addDoc(collection(db, 'artifacts', 'uni-event-hub', 'public', 'data', 'feedback'), feedbackData);
+                    return { success: true };
+                } catch (e) {
+                    return { success: false, error: e.message };
+                }
+            },
+            saveEvent: async (eventData) => {
+                if (!db) return { success: false, error: "Not initialized" };
+                try {
+                    const data = { ...eventData };
+                    delete data.Id;
+                    const docref = await addDoc(collection(db, "events"), data);
+                    return { success: true, id: docref.id };
+                } catch (e) {
+                    console.error("Error saving event:", e);
+                    return { success: false, error: e.message };
+                }
+            },
+            updateEvent: async (id, eventData) => {
+                if (!db) return { success: false, error: "Not initialized" };
+                try {
+                    const data = { ...eventData };
+                    delete data.Id;
+                    const docRef = doc(db, "events", id);
+                    await updateDoc(docRef, data);
+                    return { success: true };
+                } catch (e) {
+                    return { success: false, error: e.message };
+                }
+            },
+            deleteEvent: async (id) => {
+                if (!db) return { success: false, error: "Not initialized" };
+                console.log("Attempting to delete event with ID:", id);
+                try {
+                    if (!id) throw new Error("ID is required for deletion");
+                    const docRef = doc(db, "events", id);
+                    await deleteDoc(docRef);
+                    console.log("Delete successful for ID:", id);
+                    return { success: true };
+                } catch (e) {
+                    console.error("Delete error:", e);
+                    window.alert("Delete Failed: " + e.message);
+                    return { success: false, error: e.message };
+                }
+            },
+            signInAnonymously: async () => {
+                if (!auth) return null;
+                try {
+                    const userCredential = await firebaseSignInAnonymously(auth);
+                    return { uid: userCredential.user.uid };
+                } catch (e) {
+                    // Fallback for restricted/disabled anonymous auth
+                    console.warn("Firebase Auth Restricted in Console. Using local fallback.");
+                    let localUid = localStorage.getItem("vertex_local_uid");
+                    if (!localUid) {
+                        localUid = 'local_' + Math.random().toString(36).substr(2, 9);
+                        localStorage.setItem("vertex_local_uid", localUid);
+                    }
+                    return { uid: localUid };
+                }
+            },
+            uploadFile: async (fileName, contentType, streamReference, folder = "event-images") => {
+                if (!storage) return { success: false, error: "Storage not initialized" };
+                try {
+                    const data = await streamReference.arrayBuffer();
+                    const blob = new Blob([data], { type: contentType });
+                    const storageRef = ref(storage, `${folder}/${Date.now()}_${fileName}`);
+                    const snapshot = await uploadBytes(storageRef, blob);
+                    const url = await getDownloadURL(snapshot.ref);
+                    return { success: true, url: url };
+                } catch (e) {
+                    console.error("Upload error:", e);
+                    return { success: false, error: e.message };
+                }
+            }
+        };
+
+    </script>
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+</body>
+
+</html>

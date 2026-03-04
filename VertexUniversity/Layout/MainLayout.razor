@@ -1,0 +1,51 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@using VertexUniversity.Models
+@inject AppState AppState
+
+<div class="page-wrapper">
+    <!-- Animated Background Blobs from Mockup -->
+    <div class="blob-bg">
+        <div class="blob b1 shadow-lg"></div>
+        <div class="blob b2 shadow-lg"></div>
+        <div class="blob b3 shadow-lg"></div>
+    </div>
+
+    <div class="sidebar-wrapper">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-header px-5 pt-4 d-flex justify-content-between align-items-center">
+            <div class="search-bar-mock glass-morphism px-3 py-2 rounded-pill d-none d-md-flex align-items-center gap-2" style="width: 300px;">
+                <i class="bi bi-search text-muted"></i>
+                <span class="text-muted small">Search events...</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2 glass-morphism px-3 py-2 rounded-pill shadow-sm">
+                    <i class="bi bi-clock-history text-indigo"></i>
+                    <span class="fw-bold small">Current: Spring 2026</span>
+                </div>
+            </div>
+        </div>
+
+        <article class="content-body px-5 py-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += (s, e) => StateHasChanged();
+        AppState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= (s, e) => StateHasChanged();
+        AppState.OnChange -= StateHasChanged;
+    }
+}
+

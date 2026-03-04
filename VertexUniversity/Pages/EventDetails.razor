@@ -1,0 +1,526 @@
+@page "/EventDetails/{Id}"
+@using VertexUniversity.Models
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject AppState AppState
+
+<PageTitle>Event Details | Vertex University</PageTitle>
+
+<div class="min-vh-100 bg-light pb-5 animate-fade-in">
+    <div class="container max-w-5xl pt-5">
+        <button class="btn btn-outline-indigo rounded-pill d-flex align-items-center gap-2 mb-5 px-4 py-2 fw-bold" 
+                @onclick='() => Nav.NavigateTo("/Events")'>
+            <i class="bi bi-arrow-left"></i> Back to Events
+        </button>
+
+        @if (eventItem == null)
+        {
+            <div class="d-flex justify-content-center py-5">
+                <div class="spinner-grow text-indigo" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-0 shadow-lg rounded-5 overflow-hidden bg-white">
+                <div class="position-relative" style="height: 450px;">
+                    <img src="@eventItem.Image" 
+                         onerror="this.src='/images/campus1.jpg'; this.onerror=null;"
+                         class="w-100 h-100 object-fit-cover" 
+                         alt="@eventItem.Title">
+                    <div class="position-absolute bottom-0 start-0 w-100 p-5" 
+                         style="background: linear-gradient(transparent, rgba(0,0,0,0.9));">
+                        <div class="container-fluid p-0">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <span class="badge glass-morphism text-white px-3 py-2 rounded-pill fw-bold">
+                                    @eventItem.Category
+                                </span>
+                                @if (AppState.IsRegistered(Id))
+                                {
+                                    <span class="badge bg-success shadow-sm px-3 py-2 rounded-pill fw-bold">
+                                        <i class="bi bi-patch-check-fill me-1"></i> Registered
+                                    </span>
+                                }
+                            </div>
+                            <h1 class="text-white fw-bold mb-0 display-3">@eventItem.Title</h1>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-5">
+                    <div class="row g-5">
+                        <div class="col-lg-8">
+                            <div class="mb-5">
+                                <h5 class="text-muted text-uppercase fw-bold tracking-widest mb-3">Overview</h5>
+                                <p class="text-indigo fw-bold fs-5 mb-4">@eventItem.ShortDescription</p>
+                                
+                                <h5 class="text-muted text-uppercase fw-bold tracking-widest mb-3">About the Event</h5>
+                                <div class="bg-light p-4 rounded-4 border-start border-indigo border-5">
+                                    <p class="text-dark fs-5 leading-relaxed mb-0">@eventItem.Description</p>
+                                </div>
+                            </div>
+                            
+                           
+                            <hr class="my-5 opacity-10">
+                            <div class="feedback-section py-4">
+                                <h4 class="fw-bold text-indigo-900 mb-4 d-flex align-items-center gap-2">
+                                    <i class="bi bi-chat-left-text text-indigo"></i> Student Experience & Feedback
+                                </h4>
+                                
+                                @if (AppState.IsRegistered(Id))
+                                {
+                                    <div class="bg-indigo-soft p-5 rounded-5 border border-indigo-light shadow-sm">
+                                        <EditForm Model="feedbackModel" OnValidSubmit="SubmitFeedback">
+                                            <DataAnnotationsValidator />
+                                            <div class="mb-4">
+                                                <h5 class="fw-bold text-indigo-900 mb-2">How was your experience?</h5>
+                                                <p class="text-muted small">Your feedback helps us improve campus life at Vertex.</p>
+                                            </div>
+                                            
+                                            <div class="mb-4">
+                                                <label class="form-label small fw-bold text-uppercase text-muted mb-2">Overall Rating</label>
+                                                <div class="d-flex gap-2 rating-stars">
+                                                    @for (int i = 1; i <= 5; i++)
+                                                    {
+                                                        var starIdx = i;
+                                                        <i class="bi @(feedbackModel.Rating >= starIdx ? "bi-star-fill text-warning" : "bi-star text-muted") fs-2 star-icon" 
+                                                           style="cursor: pointer;" 
+                                                           @onclick="() => feedbackModel.Rating = starIdx"></i>
+                                                    }
+                                                </div>
+                                                <ValidationMessage For="@(() => feedbackModel.Rating)" class="text-danger small mt-1" />
+                                            </div>
+                                            
+                                            <div class="mb-4">
+                                                <label class="form-label small fw-bold text-uppercase text-muted mb-2">Detailed Comments</label>
+                                                <InputTextArea class="form-control rounded-4 border-0 p-4 shadow-inner" 
+                                                          @bind-Value="feedbackModel.Comment" 
+                                                          rows="4" 
+                                                          placeholder="What were the highlights? Anything we can improve?"></InputTextArea>
+                                                <ValidationMessage For="@(() => feedbackModel.Comment)" class="text-danger small" />
+                                            </div>
+                                            
+                                            <button type="submit" class="btn btn-indigo btn-lg rounded-pill px-5 fw-bold shadow-sm" 
+                                                    disabled="@isSubmittingFeedback">
+                                                @if (isSubmittingFeedback) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                                                <i class="bi bi-send-fill me-2"></i> Submit My Feedback
+                                            </button>
+                                        </EditForm>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center p-5 rounded-5 bg-light border-dashed border-2">
+                                        <div class="bg-white rounded-circle d-inline-flex p-4 mb-3 shadow-sm">
+                                            <i class="bi bi-lock-fill text-muted display-4"></i>
+                                        </div>
+                                        <h5 class="fw-bold text-dark">Feedback is Restricted</h5>
+                                        <p class="text-muted mx-auto mb-4" style="max-width: 400px;">
+                                            To maintain high-quality campus insights, only students registered for this event can leave feedback.
+                                        </p>
+                                        <button class="btn btn-indigo rounded-pill px-5 py-2 fw-bold shadow-sm" 
+                                                @onclick="OpenRegisterModal">
+                                            Register Now to Unlock
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="row g-4 mt-4">
+                                <div class="col-md-6">
+                                    <div class="p-4 rounded-4 bg-gray-50 border h-100 d-flex flex-column align-items-start">
+                                        <div class="p-3 rounded-circle bg-indigo-soft mb-3">
+                                            <i class="bi bi-clock-history text-indigo fs-4"></i>
+                                        </div>
+                                        <p class="text-muted small text-uppercase fw-bold mb-1">Time & Schedule</p>
+                                        <p class="fw-bold mb-0 fs-5">@eventItem.Time</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-4 rounded-4 bg-gray-50 border h-100 d-flex flex-column align-items-start">
+                                        <div class="p-3 rounded-circle bg-indigo-soft mb-3">
+                                            <i class="bi bi-people text-indigo fs-4"></i>
+                                        </div>
+                                        <p class="text-muted small text-uppercase fw-bold mb-1">Total Capacity</p>
+                                        <p class="fw-bold mb-0 fs-5">@eventItem.Capacity Students</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-4 rounded-4 bg-gray-50 border h-100 d-flex flex-column align-items-start">
+                                        <div class="p-3 rounded-circle bg-indigo-soft mb-3">
+                                            <i class="bi bi-geo-alt text-indigo fs-4"></i>
+                                        </div>
+                                        <p class="text-muted small text-uppercase fw-bold mb-1">Location</p>
+                                        <p class="fw-bold mb-0 fs-5">@eventItem.Location</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-4 rounded-4 bg-gray-50 border h-100 d-flex flex-column align-items-start">
+                                        <div class="p-3 rounded-circle bg-indigo-soft mb-3">
+                                            <i class="bi bi-calendar-check text-indigo fs-4"></i>
+                                        </div>
+                                        <p class="text-muted small text-uppercase fw-bold mb-1">Event Date</p>
+                                        <p class="fw-bold mb-0 fs-5">@eventItem.Date</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-5 opacity-10">
+
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="p-2 rounded-3 bg-light">
+                                            <i class="bi bi-person-badge text-indigo"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-muted small mb-0 fw-bold text-uppercase">Organizer</p>
+                                            <p class="mb-0 fw-bold">@(string.IsNullOrEmpty(eventItem.Organizer) ? "Vertex University" : eventItem.Organizer)</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="p-2 rounded-3 bg-light">
+                                            <i class="bi bi-envelope-at text-indigo"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-muted small mb-0 fw-bold text-uppercase">Contact Info</p>
+                                            <p class="mb-0 fw-bold">@(string.IsNullOrEmpty(eventItem.ContactInfo) ? "campus.events@vertex.edu" : eventItem.ContactInfo)</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="sticky-top" style="top: 2rem;">
+                                <div class="p-4 rounded-5 bg-gradient-indigo shadow-lg text-white">
+                                    <h4 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                                        <i class="bi bi-ticket-perforated"></i> @(AppState.IsAdmin ? "System Info" : "RSVP")
+                                    </h4>
+
+                                    @if (AppState.IsAdmin)
+                                    {
+                                        <div class="glass-morphism rounded-4 p-3 mb-3">
+                                            <p class="mb-0 small fw-bold"><i class="bi bi-info-circle me-1"></i> Admin View</p>
+                                            <p class="small opacity-75 mb-0">RSVP and Feedback are student-only features. Use the Management panel to modify this event.</p>
+                                        </div>
+                                        <button class="btn btn-light text-indigo w-100 rounded-4 py-3 fw-bold transition-all hover-scale" 
+                                                @onclick='() => Nav.NavigateTo("/ManageEvents")'>
+                                            Go to Management
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        @if (AppState.IsRegistered(Id))
+                                        {
+                                            <div class="mb-3 animate-fade-in">
+                                                <div class="glass-morphism rounded-4 p-3 d-flex align-items-center gap-3 mb-4">
+                                                    <i class="bi bi-check-circle-fill text-white fs-3"></i>
+                                                    <div>
+                                                        <p class="mb-0 fw-bold">Joined!</p>
+                                                        <p class="small mb-0 opacity-75">Your spot is reserved.</p>
+                                                    </div>
+                                                </div>
+                                                <button class="btn btn-light text-indigo w-100 rounded-4 py-3 fw-bold d-flex align-items-center justify-content-center gap-2 transition-all hover-scale" 
+                                                        @onclick='() => Nav.NavigateTo("/Events")'>
+                                                    <i class="bi bi-arrow-left"></i> See More Events
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <p class="opacity-75 mb-4">Interested in this event? Secure your spot now to receive updates and campus notifications.</p>
+                                            <button class="btn btn-light text-indigo w-100 rounded-4 py-3 fw-bold shadow-sm transition-all hover-scale" 
+                                                    @onclick="OpenRegisterModal" disabled="@isSubmittingRegistration">
+                                                @if (isSubmittingRegistration) {
+                                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                }
+                                                <i class="bi bi-envelope-paper-heart-fill me-2"></i> Confirm RSVP
+                                            </button>
+                                        }
+                                    }
+                                    <div class="mt-4 pt-4 border-top border-white border-opacity-25 opacity-75 small italic text-center">
+                                        Powered by Vertex University Event Hub
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+
+@if (showRegisterModal && eventItem != null)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1050;" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 rounded-5 shadow-lg bg-white">
+                <div class="modal-header border-0 p-4 pb-0">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-indigo-soft p-2 rounded-circle">
+                            <i class="bi bi-pencil-square text-indigo fs-4"></i>
+                        </div>
+                        <h4 class="modal-title fw-bold text-indigo-900">Event Registration</h4>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="CloseRegisterModal"></button>
+                </div>
+                <EditForm Model="regModel" OnValidSubmit="HandleRegistrationSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body p-4 p-md-5 pt-4">
+                        <div class="mb-4">
+                            <p class="text-muted mb-1">Registering for:</p>
+                            <h3 class="fw-bold text-indigo-900">@eventItem.Title</h3>
+                        </div>
+
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label small fw-bold text-muted text-uppercase mb-2">Full Name</label>
+                                    <InputText class="form-control rounded-pill border-0 bg-light p-3" 
+                                           @bind-Value="regModel.FullName" placeholder="Enter your full name" />
+                                    <ValidationMessage For="@(() => regModel.FullName)" class="text-danger small" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label small fw-bold text-muted text-uppercase mb-2">Student Email</label>
+                                    <input type="email" class="form-control rounded-pill border-0 bg-light p-3" 
+                                           value="@regModel.Email" disabled />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label small fw-bold text-muted text-uppercase mb-2">Student ID *</label>
+                                    <InputText class="form-control rounded-pill border-0 bg-light p-3 border-indigo-focus" 
+                                           @bind-Value="regModel.StudentId" placeholder="e.g. VU-2024-0001" />
+                                    <ValidationMessage For="@(() => regModel.StudentId)" class="text-danger small" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label small fw-bold text-muted text-uppercase mb-2">Faculty / Department *</label>
+                                    <InputSelect class="form-select rounded-pill border-0 bg-light p-3 border-indigo-focus" @bind-Value="regModel.Department">
+                                        <option value="">Select Faculty</option>
+                                        <option value="Computing">Faculty of Computing</option>
+                                        <option value="Business">Faculty of Business</option>
+                                        <option value="Engineering">Faculty of Engineering</option>
+                                        <option value="Arts">Faculty of Humanities & Arts</option>
+                                        <option value="Science">Faculty of Applied Sciences</option>
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => regModel.Department)" class="text-danger small" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label small fw-bold text-muted text-uppercase mb-2">Year of Study *</label>
+                                    <InputSelect class="form-select rounded-pill border-0 bg-light p-3 border-indigo-focus" @bind-Value="regModel.StudyYear">
+                                        <option value="">Select Year</option>
+                                        <option value="1st Year">1st Year (Freshman)</option>
+                                        <option value="2nd Year">2nd Year (Sophomore)</option>
+                                        <option value="3rd Year">3rd Year (Junior)</option>
+                                        <option value="4th Year">4th Year (Senior)</option>
+                                        <option value="Postgraduate">Postgraduate</option>
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => regModel.StudyYear)" class="text-danger small" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label small fw-bold text-muted text-uppercase mb-2">Contact Number</label>
+                                    <InputText type="tel" class="form-control rounded-pill border-0 bg-light p-3 border-indigo-focus" 
+                                           @bind-Value="regModel.ContactNumber" placeholder="+94 7X XXX XXXX" />
+                                    <ValidationMessage For="@(() => regModel.ContactNumber)" class="text-danger small" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-4 pt-0">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" @onclick="CloseRegisterModal">Cancel</button>
+                        <button type="submit" class="btn btn-indigo rounded-pill px-5 py-2 fw-bold shadow-sm" disabled="@isSubmittingRegistration">
+                            @if (isSubmittingRegistration) {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            } else {
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <span>Complete RSVP</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .text-indigo { color: var(--vertex-indigo); }
+    .bg-indigo-soft { background-color: var(--vertex-indigo-soft); }
+    .bg-gray-50 { background-color: #f9fafb; }
+    .border-indigo { border-color: var(--vertex-indigo) !important; }
+    .btn-outline-indigo { 
+        color: var(--vertex-indigo);
+        border-color: var(--vertex-indigo);
+    }
+    .btn-outline-indigo:hover {
+        background-color: var(--vertex-indigo);
+        color: white;
+    }
+    .shadow-indigo { box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1); }
+    .leading-relaxed { line-height: 1.8; }
+    .tracking-widest { letter-spacing: 0.15em; }
+    .max-w-5xl { max-width: 1100px; }
+    .object-fit-cover { object-fit: cover; }
+    .italic { font-style: italic; }
+    .hover-scale:hover:not(:disabled) { transform: scale(1.02); }
+    .transition-all { transition: all 0.2s ease; }
+    .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    
+    .border-dashed { border-style: dashed !important; }
+    .bg-indigo-soft { background: rgba(79, 70, 229, 0.1); }
+    .border-indigo-light { border: 1px solid rgba(79, 70, 229, 0.2) !important; }
+    .shadow-inner { box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05); }
+
+    .bg-gradient-indigo { 
+        background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%); 
+    }
+
+    .star-icon {
+        transition: transform 0.2s, color 0.2s;
+        display: inline-block;
+    }
+    .star-icon:hover {
+        transform: scale(1.25);
+        color: #ffc107 !important;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+    private Event? eventItem;
+    
+    private Feedback feedbackModel = new();
+    private bool isSubmittingFeedback = false;
+    private RegistrationModel regModel = new();
+    private bool isSubmittingRegistration = false;
+    private bool showRegisterModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        
+        try
+        {
+          
+            if (!AppState.IsAdmin)
+            {
+                var ghostAuth = await JS.InvokeAsync<FirebaseUser>("firebaseInterop.signInAnonymously");
+                if (ghostAuth != null && !string.IsNullOrEmpty(ghostAuth.Uid))
+                {
+                    if (AppState.UserName == "Vertex Student" || string.IsNullOrEmpty(AppState.UserName))
+                    {
+                        await AppState.UpdateStudentSession($"Student-{ghostAuth.Uid.Substring(0, 5)}", $"{ghostAuth.Uid}@vertex.edu");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Auth Initialization Error: " + ex.Message);
+        }
+
+        eventItem = await JS.InvokeAsync<Event>("firebaseInterop.getEventById", Id);
+        if (eventItem != null)
+        {
+            if (string.IsNullOrEmpty(eventItem.Image) || eventItem.Image == "string" || eventItem.Image == "default.jpg")
+            {
+                if (eventItem.Title.Contains("Hackathon", StringComparison.OrdinalIgnoreCase))
+                    eventItem.Image = "/images/image(3).png";
+                else if (eventItem.Title.Contains("Music", StringComparison.OrdinalIgnoreCase))
+                    eventItem.Image = "/images/music.png";
+                else if (eventItem.Title.Contains("Film", StringComparison.OrdinalIgnoreCase))
+                    eventItem.Image = "/images/images(4).png"; 
+                else
+                    eventItem.Image = "/images/campus1.jpg";
+            }
+            feedbackModel.EventId = Id;
+            feedbackModel.StudentName = AppState.UserName;
+            regModel = new RegistrationModel 
+            { 
+                FullName = AppState.UserName,
+                Email = AppState.UserEmail
+            };
+        }
+    }
+
+    public class FirebaseUser { public string Uid { get; set; } = ""; }
+
+    private void OpenRegisterModal() => showRegisterModal = true;
+    private void CloseRegisterModal() => showRegisterModal = false;
+
+    private async Task HandleRegistrationSubmit()
+    {
+        if (eventItem == null || isSubmittingRegistration) return;
+        isSubmittingRegistration = true;
+        try 
+        {
+            var result = await JS.InvokeAsync<FirebaseResult>("firebaseInterop.submitRegistration", Id, regModel);
+            if (result.Success)
+            {
+                await AppState.AddRegistration(Id);
+                await JS.InvokeVoidAsync("alert", $"Successfully registered for {eventItem.Title}! Your spot is secured.");
+                CloseRegisterModal();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Registration Error: " + (result.Error ?? "Could not connect to server."));
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", "An unexpected error occurred: " + ex.Message);
+        }
+        finally
+        {
+            isSubmittingRegistration = false;
+        }
+    }
+
+    private async Task SubmitFeedback()
+    {
+        if (eventItem == null || isSubmittingFeedback) return;
+        
+        isSubmittingFeedback = true;
+        try
+        {
+            var result = await JS.InvokeAsync<FirebaseResult>("firebaseInterop.submitFeedback", feedbackModel);
+            if (result.Success)
+            {
+                await JS.InvokeVoidAsync("alert", "Thank you for your feedback! It has been shared with the faculty.");
+                feedbackModel = new Feedback { EventId = Id, StudentName = AppState.UserName };
+            }
+        }
+        finally
+        {
+            isSubmittingFeedback = false;
+        }
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+
+    public class FirebaseResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+    }
+}
+

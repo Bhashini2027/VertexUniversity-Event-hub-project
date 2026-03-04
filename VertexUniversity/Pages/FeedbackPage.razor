@@ -1,0 +1,145 @@
+@page "/Feedback/{EventId}"
+@using VertexUniversity.Models
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Feedback - Vertex University</PageTitle>
+
+<div class="animate-fade-in pb-5">
+    <div class="container max-w-2xl">
+        <button class="btn text-indigo fw-bold d-flex align-items-center gap-2 mb-4 p-0 shadow-none hover-translate" 
+                @onclick='() => Nav.NavigateTo($"/EventDetails/{EventId}")'>
+            <i class="bi bi-arrow-left-circle-fill fs-5"></i> Back to Event Details
+        </button>
+
+        <div class="glass-morphism p-4 p-md-5 rounded-5 border-0 shadow-lg bg-white position-relative overflow-hidden">
+            <!-- Decorative accent -->
+            <div class="position-absolute top-0 start-0 w-100" style="height: 6px; background: linear-gradient(90deg, #4f46e5, #818cf8);"></div>
+
+            <h2 class="fw-bold mb-2 text-indigo-900 mt-2">Event Feedback</h2>
+            <p class="text-muted mb-5">Tell us about your experience at <span class="text-indigo fw-bold">@eventTitle</span></p>
+
+            @if (submitted)
+            {
+                <div class="text-center py-5 animate-scale-up">
+                    <div class="mx-auto bg-indigo-soft text-indigo rounded-circle d-flex align-items-center justify-content-center mb-4 shadow-sm" 
+                         style="width: 100px; height: 100px;">
+                        <i class="bi bi-check-circle-fill fs-1"></i>
+                    </div>
+                    <h3 class="fw-bold text-indigo-900">Thank You!</h3>
+                    <p class="text-muted mb-4">Your feedback helps us create better campus experiences.</p>
+                    <button class="btn btn-indigo rounded-pill px-5 py-2 shadow-sm" @onclick='() => Nav.NavigateTo("/Events")'>
+                        Return to Events
+                    </button>
+                </div>
+            }
+            else
+            {
+                <EditForm Model="feedbackModel" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="mb-5">
+                        <label class="d-block fs-6 fw-bold text-muted text-uppercase mb-3 small tracking-widest">Overall Experience</label>
+                        <div class="d-flex gap-3 justify-content-center py-3 bg-light rounded-4">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                var rating = i;
+                                <label class="cursor-pointer">
+                                    <input type="radio" class="d-none" name="rating" value="@rating" 
+                                           @onchange="() => feedbackModel.Rating = rating" required />
+                                    <i class="bi fs-1 transition-all hover-scale @(feedbackModel.Rating >= rating ? "bi-star-fill text-warning" : "bi-star text-muted opacity-25")"></i>
+                                </label>
+                            }
+                        </div>
+                        <div class="text-center mt-2">
+                           <ValidationMessage For="@(() => feedbackModel.Rating)" class="text-danger small" />
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="d-block fs-6 fw-bold text-muted text-uppercase mb-3 small tracking-widest">Your Thoughts</label>
+                        <InputTextArea @bind-Value="feedbackModel.Comment" 
+                                       class="form-control rounded-4 border-0 bg-light p-4 shadow-none" 
+                                       rows="5" 
+                                       placeholder="What did you enjoy? Any areas for improvement?" />
+                        <ValidationMessage For="@(() => feedbackModel.Comment)" class="text-danger small mt-2" />
+                    </div>
+
+                    <button type="submit" class="btn btn-indigo w-100 rounded-pill py-3 fw-bold shadow-sm mt-2 btn-lg" 
+                            disabled="@submitting">
+                        @if (submitting) {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Processing...</span>
+                        }
+                        else {
+                            <span>Submit Feedback</span>
+                        }
+                    </button>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-indigo { color: #4f46e5; }
+    .text-indigo-900 { color: #312e81; }
+    .bg-indigo-soft { background-color: rgba(79, 70, 229, 0.1); }
+    .btn-indigo { background-color: #4f46e5; color: white; border: none; }
+    .btn-indigo:hover { background-color: #4338ca; color: white; }
+    
+    .cursor-pointer { cursor: pointer; }
+    .max-w-2xl { max-width: 600px; }
+    .hover-translate:hover { transform: translateX(-5px); }
+    .hover-scale:hover { transform: scale(1.2); }
+    .transition-all { transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+    @@keyframes scaleUp { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    .animate-scale-up { animation: scaleUp 0.4s ease-out forwards; }
+</style>
+
+@code {
+    [Parameter] public string EventId { get; set; } = "";
+    private string eventTitle = "the event";
+    private Feedback feedbackModel = new();
+    private bool submitting = false;
+    private bool submitted = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        feedbackModel.EventId = EventId;
+        feedbackModel.StudentName = "Vertex Student"; // Mock student name for now
+        
+        try {
+            var e = await JS.InvokeAsync<Event>("firebaseInterop.getEventById", EventId);
+            if (e != null) eventTitle = e.Title;
+        } catch {}
+    }
+
+    private async Task HandleSubmit()
+    {
+        submitting = true;
+        try 
+        {
+            var result = await JS.InvokeAsync<FirebaseResult>("firebaseInterop.submitFeedback", feedbackModel);
+            if (result.Success)
+            {
+                submitted = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Feedback Error: " + ex.Message);
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    public class FirebaseResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+    }
+}
+

@@ -1,0 +1,230 @@
+@page "/Calendar"
+@using VertexUniversity.Models
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject AppState AppState
+
+<PageTitle>Event Calendar | Vertex University</PageTitle>
+
+<div class="animate-fade-in pb-5">
+    <div class="glass-morphism rounded-5 p-5 mb-5 shadow-lg bg-indigo text-white position-relative overflow-hidden">
+        <div class="position-relative z-index-10">
+            <h1 class="display-4 fw-bold">Campus Schedule</h1>
+            <p class="lead opacity-75">Your chronological guide to everything happening at Vertex University.</p>
+        </div>
+        <div class="calendar-abstract"></div>
+    </div>
+
+    <div class="row g-4">
+       
+        <div class="col-lg-3">
+            <div class="glass-morphism rounded-5 p-4 bg-white shadow-sm sticky-top" style="top: 20px;">
+                <h5 class="fw-bold text-indigo-900 mb-4">Filters</h5>
+                
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-3">View Mode</label>
+                    <div class="d-grid gap-2">
+                        <button class='btn @(showOnlyRegistered ? "btn-outline-indigo" : "btn-indigo") rounded-pill py-2 fw-bold shadow-sm' 
+                                @onclick="() => SetFilter(false)">
+                            All Events
+                        </button>
+                        <button class='btn @(showOnlyRegistered ? "btn-indigo" : "btn-outline-indigo") rounded-pill py-2 fw-bold shadow-sm' 
+                                @onclick="() => SetFilter(true)">
+                            My Schedule
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="my-4 opacity-10">
+
+                <div>
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-3">Legend</label>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex align-items-center gap-2 small">
+                            <span class="dot bg-primary"></span> Academic
+                        </div>
+                        <div class="d-flex align-items-center gap-2 small">
+                            <span class="dot bg-success"></span> Social
+                        </div>
+                        <div class="d-flex align-items-center gap-2 small">
+                            <span class="dot bg-warning"></span> Career
+                        </div>
+                        <div class="d-flex align-items-center gap-2 small">
+                            <span class="dot bg-info"></span> Arts
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       
+        <div class="col-lg-9">
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-indigo" role="status"></div>
+                </div>
+            }
+            else if (!filteredEvents.Any())
+            {
+                <div class="glass-morphism text-center py-5 rounded-5 border-0 bg-white shadow-sm">
+                    <i class="bi bi-calendar-x text-muted display-1 mb-4 d-block opacity-25"></i>
+                    <h3 class="fw-bold text-dark">No events found</h3>
+                    <p class="text-muted">@(showOnlyRegistered ? "You haven't registered for any events yet." : "Check back later for new updates!")</p>
+                    @if (showOnlyRegistered)
+                    {
+                        <button class="btn btn-indigo rounded-pill mt-3 px-5 py-2 shadow-sm" @onclick='() => Nav.NavigateTo("/Events")'>Browse Events</button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="timeline">
+                    @foreach (var ev in filteredEvents)
+                    {
+                        <div class="timeline-item mb-4 animate-fade-in">
+                            <div class="glass-morphism p-4 rounded-5 border-0 bg-white shadow-sm d-flex gap-4 align-items-start hover-scale-sm">
+                                <div class="date-badge flex-shrink-0 text-center rounded-4 p-3 bg-indigo-soft text-indigo" style="width: 80px;">
+                                    @{
+                                        var dateParts = ev.Date.Split('-');
+                                        if (dateParts.Length == 3)
+                                        {
+                                            <div class="fw-bold lh-1 fs-3">@dateParts[2]</div>
+                                            <div class="small fw-bold text-uppercase">@GetMonthName(dateParts[1])</div>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-calendar-event fs-3"></i>
+                                        }
+                                    }
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <span class='badge rounded-pill mb-2 @GetCategoryClass(ev.Category)'>@ev.Category</span>
+                                            <h5 class="fw-bold text-indigo-900 mb-1">@ev.Title</h5>
+                                        </div>
+                                        @if (AppState.IsRegistered(ev.Id))
+                                        {
+                                            <span class="text-success small fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Registered</span>
+                                        }
+                                    </div>
+                                    <div class="d-flex gap-4 text-muted small">
+                                        <span><i class="bi bi-clock me-1 text-indigo"></i> @ev.Time</span>
+                                        <span><i class="bi bi-geo-alt me-1 text-indigo"></i> @ev.Location</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-light rounded-circle shadow-sm flex-shrink-0" 
+                                        style="width: 45px; height: 45px;" @onclick='() => Nav.NavigateTo($"/EventDetails/{ev.Id}")'>
+                                    <i class="bi bi-chevron-right text-indigo"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-indigo { background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%); }
+    .text-indigo { color: #4f46e5; }
+    .text-indigo-900 { color: #312e81; }
+    .bg-indigo-soft { background: rgba(79, 70, 229, 0.1); }
+    .btn-indigo { background: #4f46e5; color: white; border: none; }
+    .btn-outline-indigo { border: 2px solid #4f46e5; color: #4f46e5; background: transparent; }
+    .btn-outline-indigo:hover { background: #4f46e5; color: white; }
+
+    .dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; }
+    .hover-scale-sm:hover { transform: scale(1.01); transition: transform 0.2s ease; }
+    
+    .calendar-abstract {
+        position: absolute;
+        top: -50px;
+        right: -50px;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        z-index: 1;
+    }
+
+    .z-index-10 { z-index: 10; }
+</style>
+
+@code {
+    private List<Event> allEvents = new();
+    private List<Event> filteredEvents = new();
+    private bool isLoading = true;
+    private bool showOnlyRegistered = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        await LoadEvents();
+    }
+
+    private async Task LoadEvents()
+    {
+        isLoading = true;
+        try
+        {
+            allEvents = await JS.InvokeAsync<List<Event>>("firebaseInterop.getEvents");
+            // Simple sort by date string (YYYY-MM-DD)
+            allEvents = allEvents.OrderBy(e => e.Date).ToList();
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error loading calendar: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SetFilter(bool onlyRegistered)
+    {
+        showOnlyRegistered = onlyRegistered;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (showOnlyRegistered)
+        {
+            filteredEvents = allEvents.Where(e => AppState.RegisteredEvents.Contains(e.Id)).ToList();
+        }
+        else
+        {
+            filteredEvents = allEvents;
+        }
+    }
+
+    private string GetMonthName(string monthNum)
+    {
+        return monthNum switch
+        {
+            "01" => "Jan", "02" => "Feb", "03" => "Mar", "04" => "Apr",
+            "05" => "May", "06" => "Jun", "07" => "Jul", "08" => "Aug",
+            "09" => "Sep", "10" => "Oct", "11" => "Nov", "12" => "Dec",
+            _ => "Mon"
+        };
+    }
+
+    private string GetCategoryClass(string category)
+    {
+        return category.ToLower() switch
+        {
+            "academic" => "bg-primary-subtle text-primary border border-primary-subtle",
+            "social" => "bg-success-subtle text-success border border-success-subtle",
+            "career" => "bg-warning-subtle text-warning border border-warning-subtle",
+            "arts" => "bg-info-subtle text-info border border-info-subtle",
+            _ => "bg-light text-muted"
+        };
+    }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
+}
